@@ -1,6 +1,5 @@
 name: Build Android APK
 
-# 触发：推送到 main/master、PR、以及手动在 Actions 页面点 "Run workflow"
 on:
   push:
     branches: [ main, master ]
@@ -12,58 +11,14 @@ permissions:
   contents: read
 
 jobs:
-  # 默认每次构建都产出可安装的 Debug APK（无需任何密钥）
-  build-debug:
-    name: Build Debug APK
+  build:
+    name: Build APK
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - name: Setup JDK 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: zulu
-          java-version: 17
-
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-        with:
-          packages: 'platform-tools platforms;android-34 build-tools;34.0.0'
-
-      - name: Install npm dependencies
-        run: npm install
-
-      - name: Capacitor sync (copy web assets into Android project)
-        run: npx cap sync android
-
-      - name: Make gradlew executable
-        working-directory: android
-        run: chmod +x ./gradlew
-
-      - name: Build debug APK
-        working-directory: android
-        run: ./gradlew assembleDebug --no-daemon
-
-      - name: Upload debug APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: yeyu-music-debug-apk
-          path: android/app/build/outputs/apk/debug/*.apk
-          if-no-files-found: error
-
-  # 可选：当你在仓库 Settings → Secrets 里配置了签名密钥后，
-  # 每次 push 自动产出「已签名」的 Release APK
-  build-release:
-    name: Build Signed Release APK
-    runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'push' && secrets.RELEASE_KEYSTORE_BASE64 != '' }}
+    env:
+      KS_B64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+      KS_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+      KS_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+      KS_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -91,14 +46,37 @@ jobs:
       - name: Capacitor sync
         run: npx cap sync android
 
-      - name: Decode release keystore
-        run: echo "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 -d > android/app/release.keystore
-
       - name: Make gradlew executable
+        run: chmod +x android/gradlew
+
+      - name: Detect signing secrets
+        id: sign
+        run: |
+          if [ -n "$KS_B64" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+            echo "detected keystore: will also build signed release APK"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "no keystore secret: debug APK only"
+          fi
+
+      - name: Build debug APK
         working-directory: android
-        run: chmod +x ./gradlew
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: yeyu-music-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+
+      - name: Decode release keystore
+        if: steps.sign.outputs.enabled == 'true'
+        run: echo "$KS_B64" | base64 -d > android/app/release.keystore
 
       - name: Build signed release APK
+        if: steps.sign.outputs.enabled == 'true'
         working-directory: android
         env:
           RELEASE_KEYSTORE_FILE: ${{ github.workspace }}/android/app/release.keystore
@@ -108,6 +86,7 @@ jobs:
         run: ./gradlew assembleRelease --no-daemon
 
       - name: Upload signed release APK
+        if: steps.sign.outputs.enabled == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: yeyu-music-release-apk
