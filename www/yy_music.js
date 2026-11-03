@@ -293,6 +293,8 @@
 	};
 	yyMusic.prototype.playlist = function(playlistId){
         let that = this;
+        let $box = $(that.elem+' .wyy-playlist');
+        $box.html('<div class="data-null">正在加载歌单…</div>');
 		$.get(that.apiUrl('API/'),{playlist: playlistId},(res)=>{
 		    if(res.code == 0){
         	    var div =  `<div class="listInfo ${res.image && 'showImg'}">
@@ -322,13 +324,26 @@
         			</tr>`;
     		    }
     		    div += `</tbody></table>`;
-    		    $(that.elem+' .wyy-playlist').html(div);
+    		    $box.html(div);
 				$('title').text(res.title);
-	        }
-        }, "json");
+	        } else {
+                $box.html('<div class="data-null">歌单详情加载失败：' + ((res && res.msg) || '暂无数据') + '</div>');
+            }
+        }, "json").fail(function(xhr){
+            var st = xhr ? xhr.status : 0;
+            $box.html('<div class="data-null">歌单详情加载失败：' +
+                (st === 0 ? '无法连接服务器（检查服务器地址）' : 'HTTP ' + st) + '</div>');
+        });
 	};
     yyMusic.prototype.playlists = function (cat, page=1) {
         let that = this;
+        let $box = $(that.elem+' .wyy-data_list');
+        $box.html('<div class="data-null">正在加载歌单…</div>');
+        let failHtml = function(msg){
+            $box.html('<div class="data-null">歌单加载失败：' + msg +
+                '<br><a href="javascript:;" id="yeyuPlRetry" style="color:#6ea8ff">点击重试</a></div>');
+            $('#yeyuPlRetry').off('click').on('click', function(){ that.playlists(cat, page); });
+        };
 		$.get(that.apiUrl('API/playlist.php'),{cat: cat,page: page},(res)=>{
 		    if(res.code == 0){
     		    var div = '';
@@ -343,12 +358,20 @@
                         <p class="playlistAuthor">by：${item.author}</p>
                     </a></div>`;
     		    }
-    		    $(that.elem+' .wyy-data_list').html(div);
+    		    $box.html(div);
     			$('.currCat').removeClass("currCat");
     			$("[cat='" + cat + "']").addClass("currCat");
 				$('title').text(cat+ ' - 分类歌单');
-		    }
-		}, "json");
+		    } else {
+                failHtml(res && res.msg ? res.msg : '暂无歌单');
+            }
+		}, "json").fail(function(xhr){
+            var st = xhr ? xhr.status : 0;
+            var tip = st === 404 ? '服务器上未找到 API/playlist.php（请重新上传 API 部署包）'
+                    : (st === 0 ? '无法连接服务器（检查服务器地址 / 是否被强制跳转 HTTPS）'
+                                : 'HTTP ' + st + '（服务端错误）');
+            failHtml(tip);
+        });
 	};
     yyMusic.prototype.renderPlayerlist = function () {
         let that = this;

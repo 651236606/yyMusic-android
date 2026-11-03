@@ -51,10 +51,53 @@
         border-color:#2b6cff;
         color:#fff;
     }
+
+    /* ===== 手机端：工具栏改成两排（仅窄屏生效，桌面版不受影响） ===== */
+    @media (max-width:720px){
+        /* 隐藏右侧封面/歌词面板，让左侧列表占满宽度 */
+        .yyMusic .yyMusicMain > .yyMusicLrc{ display:none !important; }
+        .yyMusic .yyMusicMain > .yyMusicList{
+            flex:1 1 auto !important; width:100% !important;
+            min-width:0 !important; max-width:none !important;
+        }
+        /* 第一排 4 个按钮均分整行，第二排搜索框全宽 */
+        .yyMusic .musiclist_flex{
+            flex-direction:column !important;
+            align-items:stretch !important;
+            justify-content:flex-start !important;
+            overflow-x:visible !important;
+            gap:8px !important;
+            padding:8px 0 !important;
+        }
+        .yyMusic .musiclist_flex .list_bar{
+            display:flex !important; flex-wrap:nowrap !important;
+            width:100% !important; gap:5px !important;
+        }
+        .yyMusic .musiclist_flex .list_bar > a{
+            flex:1 1 0 !important; min-width:0 !important;
+            margin:0 !important; padding:8px 1px !important;
+            text-align:center !important; font-size:11px !important;
+            white-space:nowrap !important;
+        }
+        .yyMusic .musiclist_flex .list_bar > a > i{
+            font-size:11px !important; margin-right:2px !important;
+        }
+        .yyMusic .musiclist_flex .flex_r{ width:100% !important; }
+        .yyMusic .musiclist_flex .flex_r .searchBtn{
+            display:block !important; padding:0 !important; border:0 !important;
+        }
+        .yyMusic .musiclist_flex .flex_r .searchBtn form{
+            display:flex !important; width:100% !important;
+            box-sizing:border-box !important;
+        }
+        .yyMusic .musiclist_flex .flex_r .searchBtn form input{
+            flex:1 1 auto !important; min-width:0 !important; width:auto !important;
+        }
+    }
     </style>
     <script src="jquery.min.js"></script>
     <script src="layer/layer.js"></script>
-    <script src="yy_music.js?v=6"></script>
+    <script src="yy_music.js?v=7"></script>
     <script src="style/spectrum.js"></script>
 </head>
 <body>
