@@ -1159,9 +1159,16 @@
 	    'font-family: helvetica neue, Helvetica, Arial, sans-serif;color:#f446ff; text-shadow: 1px 1px 1px rgb(0 0 0 / 30%); font-size:20px;font-weight: bold;'
     );
 	/* ===== 移动端（Capacitor/Android）扩展 ===== */
-	yyMusic.prototype.apiRoot = function() {
-		let b = (localStorage.getItem('yy_api_base')||'').trim().replace(/\/+$/,'');
+	/* 规范化服务器地址：去尾部斜杠；用户只填 IP/域名时自动补 http:// */
+	function yyNormBase(v) {
+		let b = (v || '').trim().replace(/\/+$/, '');
+		if (!b) return '';
+		if (!/^[a-zA-Z][a-zA-Z0-9+.\-]*:\/\//.test(b)) b = 'http://' + b;
 		return b;
+	}
+	window.yyNormBase = yyNormBase;
+	yyMusic.prototype.apiRoot = function() {
+		return yyNormBase(localStorage.getItem('yy_api_base'));
 	};
 	yyMusic.prototype.apiUrl = function(p) {
 		let b = this.apiRoot();
@@ -1207,9 +1214,9 @@
 		let html = `
 		<div class="yeyu-settings" style="padding:18px 20px;min-width:320px;color:#e8e8e8;font-family:inherit;">
 			<div style="font-size:15px;font-weight:600;margin-bottom:6px;">服务器设置</div>
-			<div style="font-size:12px;color:#999;margin-bottom:10px;">填写部署在服务器上的 yyMusic API 地址（到站点根目录，例如 https://你的域名/yyMusic 或 http://服务器IP）。</div>
+			<div style="font-size:12px;color:#999;margin-bottom:10px;line-height:1.7;">填 <b>API 目录的上一级</b>，App 会自动拼 <code>/API/</code>。<br>例：<code>http://8.218.229.136</code> 或 <code>https://你的域名/yyMusic</code><br>只填 IP 也行，会自动补 <code>http://</code>。</div>
 			<div style="font-size:13px;color:#bbb;margin-bottom:6px;">API 服务器地址</div>
-			<input id="yeyuApiBase" value="${cur}" placeholder="https://你的域名/yyMusic" style="width:100%;box-sizing:border-box;padding:9px 10px;border:1px solid #333;border-radius:6px;background:#1e1e1e;color:#ddd;font-size:13px;" />
+			<input id="yeyuApiBase" value="${cur}" placeholder="http://8.218.229.136" style="width:100%;box-sizing:border-box;padding:9px 10px;border:1px solid #333;border-radius:6px;background:#1e1e1e;color:#ddd;font-size:13px;" />
 			<div style="margin-top:12px;display:flex;gap:10px;">
 				<button id="yeyuSaveApi" style="flex:1;padding:9px 0;border:1px solid #2b6cff;background:#2b6cff;color:#fff;border-radius:6px;cursor:pointer;font-size:13px;">保存</button>
 				<button id="yeyuTestApi" style="flex:1;padding:9px 0;border:1px solid #444;background:#2a2a2a;color:#ddd;border-radius:6px;cursor:pointer;font-size:13px;">测试连接</button>
@@ -1219,31 +1226,73 @@
 		</div>`;
 		layer.open({ type:1, title:'设置', area:['380px','auto'], shadeClose:true, content:html });
 		$('#yeyuSaveApi').off('click').on('click', function(){
-			let v = $('#yeyuApiBase').val().trim().replace(/\/+$/,'');
+			let v = yyNormBase($('#yeyuApiBase').val());
+			if (!v) { $('#yeyuApiTip').text('请先填写地址'); return; }
 			localStorage.setItem('yy_api_base', v);
-			$('#yeyuApiTip').text('已保存，正在刷新…');
+			$('#yeyuApiTip').text('已保存：' + v + '，正在刷新…');
 			setTimeout(function(){ location.reload(); }, 800);
 		});
 		$('#yeyuTestApi').off('click').on('click', function(){
-			let v = $('#yeyuApiBase').val().trim().replace(/\/+$/,'');
+			let v = yyNormBase($('#yeyuApiBase').val());
 			if(!v){ $('#yeyuApiTip').text('请先填写地址'); return; }
-			$('#yeyuApiTip').text('测试中…');
-			$.get(that.apiUrl('API/') + '?key=' + encodeURIComponent('周杰伦'), function(res){
-				$('#yeyuApiTip').text('连接成功 ✓');
-			}, 'json').fail(function(){
-				$('#yeyuApiTip').text('连接失败，请检查地址与服务器');
-			});
+			let url = v + '/API/?key=' + encodeURIComponent('周杰伦');
+			$('#yeyuApiTip').text('测试中：' + url);
+			$.ajax({ url: url, dataType: 'json', timeout: 15000 })
+				.done(function(res){
+					let ok = res && (res.result || res.code || res.data || res.song_list || res.songs);
+					$('#yeyuApiTip').text(ok ? '连接成功 ✓ 请点「保存」' : '已连通，但返回空数据（检查 API 是否正常 / Cookie 是否有效）');
+				})
+				.fail(function(xhr, st){
+					let code = xhr && xhr.status;
+					let tip = '连接失败：' + (st || 'error') + (code ? '（HTTP ' + code + '）' : '');
+					if (!code) tip += ' 网络不通：手机无法访问该地址，或 http/https 不匹配';
+					else if (code === 404) tip += ' 路径不存在：API 未上传到该目录';
+					else if (code === 403) tip += ' 被拒绝：服务器目录权限或 nginx 规则限制';
+					else if (code >= 500) tip += ' 服务器错误：PHP 报错或无法执行 PHP';
+					$('#yeyuApiTip').text(tip);
+				});
 		});
 	};
-	/* 移动端初始化引导：未配置服务器地址时自动弹出设置 */
+	/* 移动端初始化引导：未配置服务器地址时自动弹设置；已配置则做一次连通性自检 */
 	yyMusic.prototype._androidSetupCheck = function() {
 		let that = this;
-		if (that._isAndroid() && !that.apiRoot()) {
+		if (!that._isAndroid()) return;
+		if (!that.apiRoot()) {
 			setTimeout(function(){ try { that.settings(); } catch(e){} }, 700);
+			return;
 		}
+		// 已配置地址：启动时自检一次，连不上就明确告知原因并引导修改
+		setTimeout(function(){
+			let base = that.apiRoot();
+			let url = base + '/API/?key=' + encodeURIComponent('周杰伦');
+			$.ajax({ url: url, dataType: 'json', timeout: 12000 })
+				.done(function(res){
+					let ok = res && (res.result || res.code || res.data || res.song_list || res.songs);
+					if (!ok) {
+						layer.msg('服务器已连通，但返回数据异常，请检查 API 与 Cookie', {offset:'rt', anim:'slideLeft', time:4000});
+					}
+				})
+				.fail(function(xhr, st){
+					let code = xhr && xhr.status;
+					let reason = code ? ('HTTP ' + code) : (st === 'timeout' ? '请求超时' : '网络不通');
+					let hint = '';
+					if (!code) hint = '手机无法访问该地址（IP 填错 / 服务器未开机 / 防火墙拦截）';
+					else if (code === 404) hint = '路径不存在 —— API 还没上传到该目录';
+					else if (code === 403) hint = '服务器拒绝访问（目录权限或 nginx 规则）';
+					else if (code >= 500) hint = '服务器 PHP 报错或未启用 PHP';
+					else if (code === 0) hint = '请求被拦截（http/https 不匹配）';
+					layer.confirm(
+						'<div style="font-size:14px;color:#e8e8e8;line-height:1.7;">连接失败：' + reason + '</div>'
+						+ '<div style="font-size:12px;color:#9fc;margin-top:6px;word-break:break-all;">' + base + '/API/</div>'
+						+ '<div style="font-size:12px;color:#aaa;margin-top:8px;line-height:1.6;">' + hint + '</div>',
+						{ title: '无法连接到服务器', btn: ['去设置', '取消'] },
+						function(i){ layer.close(i); that.settings(); }
+					);
+				});
+		}, 900);
 	};
 	window.yyFullApi = function(p){
-		var b = (localStorage.getItem('yy_api_base')||'').trim().replace(/\/+$/,'');
+		var b = yyNormBase(localStorage.getItem('yy_api_base'));
 		if(!b) return (p.charAt(0)==='/' ? '.'+p : './'+p);
 		return b + '/' + p.replace(/^(\.\/)+/,'');
 	};
