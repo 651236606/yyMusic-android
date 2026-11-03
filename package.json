@@ -1,0 +1,21 @@
+{
+  "name": "yyMusic-android",
+  "version": "1.0.0",
+  "private": true,
+  "description": "夜雨音乐 Android 版（Capacitor + 远程网易云 PHP API）",
+  "dependencies": {
+    "@capacitor/core": "^6.1.2",
+    "@capacitor/android": "^6.1.2",
+    "@capacitor/filesystem": "^6.0.2",
+    "@capacitor/dialog": "^6.0.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.1.2"
+  },
+  "scripts": {
+    "build": "echo \"前端为静态资源，无需打包；直接执行 cap sync\"",
+    "cap:add": "cap add android",
+    "cap:sync": "cap sync",
+    "cap:build": "cap build android"
+  }
+}
