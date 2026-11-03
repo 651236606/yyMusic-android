@@ -1,0 +1,11 @@
+# 统一换行符，避免 Windows 下 CRLF 污染导致 Linux CI 无法执行脚本
+* text=auto
+gradlew text eol=lf
+*.sh text eol=lf
+*.bat text eol=crlf
+
+# 二进制文件不参与文本转换
+*.jar binary
+*.png binary
+*.jks binary
+*.keystore binary
