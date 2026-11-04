@@ -266,18 +266,22 @@
     yyMusic.prototype.Refresh = function () {
         let that = this;
 		var m = getHash('m');
+		/* 切换标签页：只给当前页加 .yy-tab-on（窄屏下歌曲列表需要 flex 布局），
+		   其余页用 .hide() 隐藏，避免 !important 覆盖掉隐藏状态 */
+		let showTab = function(sel){
+			$(that.elem+" .webTab").removeClass('yy-tab-on').hide();
+			$(that.elem+" "+sel).addClass('yy-tab-on').show();
+		};
 		switch (m) {
 			case 'playlists':
 				let cat = getHash('cat')?decodeURIComponent(getHash('cat')) : '全部';
 				that.playlists(cat, getHash('page') || 1);
 				$(that.elem+" .playlists").addClass("onNav").siblings().removeClass("onNav");
-				$(that.elem+" .webTab").hide();
-				$(that.elem+" .wyy-list").show();
+				showTab('.wyy-list');
 				break;
 			case 'playlist':
 			    that.playlist(getHash('id'));
-				$(that.elem+" .webTab").hide();
-				$(that.elem+" .wyy-playlist").show();
+				showTab('.wyy-playlist');
 				break;
 			case 'toplist':
 			    layer.msg('功能开发中');
@@ -285,8 +289,7 @@
 			case 'musiclists':
 			default:
 				$(that.elem+" .musiclists").addClass("onNav").siblings().removeClass("onNav");
-    			$(that.elem+' .webTab').hide();
-    			$(that.elem+' .music-data-list').show();
+    			showTab('.music-data-list');
 		}
 	};
 	yyMusic.prototype.playlist = function(playlistId){

@@ -79,17 +79,22 @@
         }
         .yyMusic .music-table-wrap{ min-width:0 !important; }
 
-        /* ---- 列表区改为纵向 flex：工具栏在上，表格自动占满剩余高度 ---- */
+        /* ---- 列表区改为纵向 flex：工具栏在上，表格自动占满剩余高度 ----
+           注意：display 只在「当前激活页」上强制为 flex（.yy-tab-on），
+           否则 !important 会覆盖切换时的 display:none，导致点歌单没反应 */
         .yyMusic .music-data-list.webTab{
-            display:flex !important; flex-direction:column !important;
             height:100% !important; overflow:hidden !important;
+        }
+        .yyMusic .music-data-list.webTab.yy-tab-on{
+            display:flex !important; flex-direction:column !important;
         }
         .yyMusic .music-list-top, .yyMusic .musiclist_top{
             flex:0 0 auto !important; height:auto !important;
             padding:0 8px !important; overflow:visible !important; white-space:normal !important;
         }
         .yyMusic .music-data-list.webTab > table.music-table{ flex:0 0 auto !important; }
-        .yyMusic .table-scroll{
+        /* 只作用于歌曲列表的滚动区，别影响歌单弹层里的 .table-scroll */
+        .yyMusic .music-data-list .table-scroll{
             flex:1 1 auto !important; height:auto !important; min-height:0 !important;
             overflow-y:auto !important; overflow-x:hidden !important;
             -webkit-overflow-scrolling:touch;
@@ -163,7 +168,7 @@
     </style>
     <script src="jquery.min.js"></script>
     <script src="layer/layer.js"></script>
-    <script src="yy_music.js?v=8"></script>
+    <script src="yy_music.js?v=9"></script>
     <script src="style/spectrum.js"></script>
 </head>
 <body>
