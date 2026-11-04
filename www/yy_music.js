@@ -465,7 +465,7 @@
         layer.open({
             type: 1,
             title: '歌曲下载',
-            area: ['360px', 'auto'],
+            area: [yyAreaW(360), 'auto'],
             shadeClose: true,
             content: html
         });
@@ -716,7 +716,7 @@
             value: '',
             btn: ['导入', '取消'],
             shadeClose: true,
-            area: ['380px', 'auto']
+            area: [yyAreaW(380), 'auto']
         }, function(val, index) {
             val = (val || '').trim();
             if (!val) { layer.msg('请输入歌单链接或ID'); return; }
@@ -769,7 +769,7 @@
         layer.open({
             type: 1,
             title: '设置',
-            area: ['380px', 'auto'],
+            area: [yyAreaW(380), 'auto'],
             shadeClose: true,
             content: html
         });
@@ -1181,6 +1181,12 @@
 		return b;
 	}
 	window.yyNormBase = yyNormBase;
+	/* 弹窗宽度：不超过屏幕宽度（手机竖屏也能完整显示） */
+	function yyAreaW(max) {
+		let vw = window.innerWidth || document.documentElement.clientWidth || 375;
+		return Math.max(260, Math.min(max, vw - 24)) + 'px';
+	}
+	window.yyAreaW = yyAreaW;
 	yyMusic.prototype.apiRoot = function() {
 		return yyNormBase(localStorage.getItem('yy_api_base'));
 	};
@@ -1238,7 +1244,7 @@
 			<div id="yeyuApiTip" style="margin-top:12px;font-size:12px;color:#888;min-height:16px;"></div>
 			<div style="margin-top:14px;font-size:12px;color:#777;line-height:1.6;">歌曲下载保存在手机存储的 Documents 目录（应用私有）。</div>
 		</div>`;
-		layer.open({ type:1, title:'设置', area:['380px','auto'], shadeClose:true, content:html });
+		layer.open({ type:1, title:'设置', area:[yyAreaW(380),'auto'], shadeClose:true, content:html });
 		$('#yeyuSaveApi').off('click').on('click', function(){
 			let v = yyNormBase($('#yeyuApiBase').val());
 			if (!v) { $('#yeyuApiTip').text('请先填写地址'); return; }
