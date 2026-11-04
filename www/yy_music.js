@@ -266,22 +266,18 @@
     yyMusic.prototype.Refresh = function () {
         let that = this;
 		var m = getHash('m');
-		/* 切换标签页：只给当前页加 .yy-tab-on（窄屏下歌曲列表需要 flex 布局），
-		   其余页用 .hide() 隐藏，避免 !important 覆盖掉隐藏状态 */
-		let showTab = function(sel){
-			$(that.elem+" .webTab").removeClass('yy-tab-on').hide();
-			$(that.elem+" "+sel).addClass('yy-tab-on').show();
-		};
 		switch (m) {
 			case 'playlists':
 				let cat = getHash('cat')?decodeURIComponent(getHash('cat')) : '全部';
 				that.playlists(cat, getHash('page') || 1);
 				$(that.elem+" .playlists").addClass("onNav").siblings().removeClass("onNav");
-				showTab('.wyy-list');
+				$(that.elem+" .webTab").hide();
+				$(that.elem+" .wyy-list").show();
 				break;
 			case 'playlist':
 			    that.playlist(getHash('id'));
-				showTab('.wyy-playlist');
+				$(that.elem+" .webTab").hide();
+				$(that.elem+" .wyy-playlist").show();
 				break;
 			case 'toplist':
 			    layer.msg('功能开发中');
@@ -289,7 +285,8 @@
 			case 'musiclists':
 			default:
 				$(that.elem+" .musiclists").addClass("onNav").siblings().removeClass("onNav");
-    			showTab('.music-data-list');
+    			$(that.elem+' .webTab').hide();
+    			$(that.elem+' .music-data-list').show();
 		}
 	};
 	yyMusic.prototype.playlist = function(playlistId){
@@ -468,7 +465,7 @@
         layer.open({
             type: 1,
             title: '歌曲下载',
-            area: [yyAreaW(360), 'auto'],
+            area: ['360px', 'auto'],
             shadeClose: true,
             content: html
         });
@@ -719,7 +716,7 @@
             value: '',
             btn: ['导入', '取消'],
             shadeClose: true,
-            area: [yyAreaW(380), 'auto']
+            area: ['380px', 'auto']
         }, function(val, index) {
             val = (val || '').trim();
             if (!val) { layer.msg('请输入歌单链接或ID'); return; }
@@ -772,7 +769,7 @@
         layer.open({
             type: 1,
             title: '设置',
-            area: [yyAreaW(380), 'auto'],
+            area: ['380px', 'auto'],
             shadeClose: true,
             content: html
         });
@@ -1184,12 +1181,6 @@
 		return b;
 	}
 	window.yyNormBase = yyNormBase;
-	/* 弹窗宽度：不超过屏幕宽度（手机竖屏也能完整显示） */
-	function yyAreaW(max) {
-		let vw = window.innerWidth || document.documentElement.clientWidth || 375;
-		return Math.max(260, Math.min(max, vw - 24)) + 'px';
-	}
-	window.yyAreaW = yyAreaW;
 	yyMusic.prototype.apiRoot = function() {
 		return yyNormBase(localStorage.getItem('yy_api_base'));
 	};
@@ -1247,7 +1238,7 @@
 			<div id="yeyuApiTip" style="margin-top:12px;font-size:12px;color:#888;min-height:16px;"></div>
 			<div style="margin-top:14px;font-size:12px;color:#777;line-height:1.6;">歌曲下载保存在手机存储的 Documents 目录（应用私有）。</div>
 		</div>`;
-		layer.open({ type:1, title:'设置', area:[yyAreaW(380),'auto'], shadeClose:true, content:html });
+		layer.open({ type:1, title:'设置', area:['380px','auto'], shadeClose:true, content:html });
 		$('#yeyuSaveApi').off('click').on('click', function(){
 			let v = yyNormBase($('#yeyuApiBase').val());
 			if (!v) { $('#yeyuApiTip').text('请先填写地址'); return; }
