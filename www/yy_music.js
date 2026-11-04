@@ -1,8 +1,6 @@
 /**
  * name: YYMusicPlayer
  * version: 1.2.1
- * author: wuge
- * link: http://bbs.yylog.cn/
  */
 ! function(win) {
 	var formatTime = function(s) {
@@ -1174,14 +1172,7 @@
 			currentLyric: $(that.elem).find(".lrcline[data-no='" + i + "']").html()
 		});
 	}
-	/*请保留作者信息*/
-	console.log(
-	    '%c'+decodeURIComponent("%E5%A4%9C%E9%9B%A8%E9%9F%B3%E9%A2%91%E6%92%AD%E6%94%BE%E5%99%A8\n\n")+
-	    '%c'+decodeURIComponent("%E4%BD%9C%E8%80%85%EF%BC%9A%E4%BA%94%E5%93%A5%20%20%20%20%20%20https%3A%2F%2Fmusic.yylog.cn%2F"),
-	    'font-family: helvetica neue, Helvetica, Arial, sans-serif;color:#40aeff; text-shadow: 1px 1px 1px rgb(0 0 0 / 30%); font-size:40px;font-weight: bold;',
-	    'font-family: helvetica neue, Helvetica, Arial, sans-serif;color:#f446ff; text-shadow: 1px 1px 1px rgb(0 0 0 / 30%); font-size:20px;font-weight: bold;'
-    );
-	/* ===== 移动端（Capacitor/Android）扩展 ===== */
+		/* ===== 移动端（Capacitor/Android）扩展 ===== */
 	/* 规范化服务器地址：去尾部斜杠；用户只填 IP/域名时自动补 http:// */
 	function yyNormBase(v) {
 		let b = (v || '').trim().replace(/\/+$/, '');
