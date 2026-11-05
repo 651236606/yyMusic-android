@@ -5,7 +5,7 @@
     <meta name="referrer" content="no-referrer" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
     <title>夜雨音乐</title>
-    <link href="style/yy_music.css" rel="stylesheet">
+    <link href="style/yy_music.css?v=12" rel="stylesheet">
     <style>
     /* 右侧歌词/封面面板：固定宽度，窗口缩放时不再变化 */
     .yyMusic .yyMusicMain > .yyMusicLrc{
@@ -53,13 +53,67 @@
     }
 
     /* ===== 手机端适配（仅窄屏生效，桌面版不受影响）=====
-       注意：本段只调整高度 / 宽度 / 内边距，绝不覆盖 display，
-       否则会盖掉标签切换用的 jQuery .hide()（display:none）。 */
+       注意：除歌词浮层（用 .lrcOpen 明确控制显示）外，
+       本段不覆盖 display，否则会盖掉标签切换用的 jQuery .hide()（display:none）。 */
     @media (max-width:820px){
         html, body{ overflow-x:hidden; }
 
-        /* 隐藏右侧封面/歌词面板，让左侧列表占满宽度 */
-        .yyMusic .yyMusicMain > .yyMusicLrc{ display:none !important; }
+        /* ===== 歌词浮层：点「词」全屏展示，可「返回列表」 =====
+           关键：默认 display:none（带 !important），仅 .lrcOpen 时显示，
+           保证在任何宽度都能被 JS 正确开合，不再出现「点了变空白」。 */
+        .yyMusic .yyMusicMain > .yyMusicLrc{
+            display:none !important;
+            position:fixed !important; left:0 !important; right:0 !important;
+            top:75px !important; bottom:60px !important;
+            width:auto !important; min-width:0 !important; max-width:none !important;
+            flex:none !important; z-index:90 !important;
+            background-color:rgba(0,0,0,.42);
+            -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
+            overflow:hidden;
+        }
+        .yyMusic .yyMusicMain > .yyMusicLrc.lrcOpen{ display:block !important; }
+
+        .yyMusic .yyMusicLrc .yy-lrc-back{
+            display:flex; align-items:center;
+            position:absolute; left:10px; top:8px; z-index:12;
+            padding:6px 12px; border-radius:14px;
+            background-color:rgba(255,255,255,.15);
+            color:#fff; font-size:13px; line-height:1.2;
+            text-decoration:none; user-select:none;
+        }
+        .yyMusic .yyMusicLrc .yy-lrc-back:active{ background-color:rgba(255,255,255,.3); }
+
+        .yyMusic .yyMusicLrc .yyMusicLrc_w{
+            display:flex; flex-direction:column;
+            height:100% !important; box-sizing:border-box;
+            padding:0 6px 4px !important;
+        }
+        .yyMusic .yyMusicLrc .yyMusicAlbum{
+            position:relative !important; top:auto !important; left:auto !important;
+            transform:none !important; margin:46px auto 10px !important; flex:none;
+        }
+        .yyMusic .yyMusicLrc .albumPoster,
+        .yyMusic .yyMusicLrc .albumPoster .image{
+            width:96px !important; height:96px !important; border-radius:6px;
+        }
+        /* 桌面版的唱片装饰图是固定 201×180，小封面上会露出来，手机端直接隐藏 */
+        .yyMusic .yyMusicLrc .albumPoster:after{ display:none !important; }
+        .yyMusic .yyMusicLrc .lrcText{
+            flex:1 1 auto !important; height:auto !important; min-height:0 !important;
+            padding:0 12px !important;
+            overscroll-behavior:contain;
+            -webkit-mask-image:linear-gradient(to bottom,transparent 0%,#000 12%,#000 88%,transparent 100%);
+            mask-image:linear-gradient(to bottom,transparent 0%,#000 12%,#000 88%,transparent 100%);
+        }
+        .yyMusic .yyMusicLrc .lrcText::-webkit-scrollbar{ width:0 !important; height:0 !important; }
+        .yyMusic .yyMusicLrc .lrcText .loadLrc{ padding:14px 0 !important; }
+        .yyMusic .yyMusicLrc .lrcText .loadLrc li{ font-size:14px !important; line-height:34px; }
+        .yyMusic .yyMusicLrc .lrcText .loadLrc li.currline{ font-size:17px !important; }
+        .yyMusic .yyMusicLrc .defaultLrc{ font-size:14px; }
+
+        /* 「词」按钮打开时高亮 */
+        .yyMusic .yyMusicView .playbtn>a.songlrc.on{ color:#48baff !important; }
+
         .yyMusic .yyMusicMain > .yyMusicList{
             flex:1 1 auto !important; width:100% !important;
             min-width:0 !important; max-width:none !important;
@@ -152,6 +206,19 @@
             width:48px !important; max-width:48px !important; padding:10px 4px !important;
         }
 
+        /* --- 表头并入数据表：避免「表头一张表、数据另一张表」各算列宽导致错位 --- */
+        .yyMusic .music-data-list > .music-table.head-only{ display:none !important; }
+        .yyMusic .table-scroll .music-table[for] thead{ display:table-header-group !important; }
+        .yyMusic .music-table .list_data{ display:table-row-group !important; }
+        .yyMusic .music-table.currentList{ display:table !important; }
+
+        /* 长列表滚动时表头吸顶 */
+        .yyMusic .table-scroll .music-table[for] thead th{
+            position:sticky !important; top:0; z-index:5;
+            background-color:rgba(26,19,14,.96);
+            -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);
+        }
+
         /* 歌单浮层不超出屏幕 */
         .yyMusic .playlist{ width:94vw !important; right:3vw !important; }
 
@@ -165,7 +232,7 @@
     </style>
     <script src="jquery.min.js"></script>
     <script src="layer/layer.js"></script>
-    <script src="yy_music.js?v=8"></script>
+    <script src="yy_music.js?v=12"></script>
     <script src="style/spectrum.js"></script>
 </head>
 <body>

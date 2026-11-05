@@ -1,6 +1,6 @@
 /**
  * name: YYMusicPlayer
- * version: 1.2.1
+ * version: 1.2.10
  */
 ! function(win) {
 	var formatTime = function(s) {
@@ -141,8 +141,7 @@
                             <div class="musiclist_top">
                                 <div class="musiclist_flex">
                                     <div class="list_bar">
-                                        <a id="defaultPlaylist" class="defaultPlaylist currentList">默认歌单</a>
-                                        <!--a id="myPlaylist" class="myPlaylist">我的歌单</a-->
+                                        <a id="defaultPlaylist" class="defaultPlaylist currentListBtn">默认歌单</a>
                                         <a id="myFavorites" class="myFavorites">我的收藏</a>
                                         <a id="playAll" class="playAllBtn"><i class="yymc yymc-play"></i> 播放全部</a>
                                         <a id="importPlaylist" class="importBtn"><i class="yymc yymc-add"></i> 导入歌单</a>
@@ -153,7 +152,7 @@
                                     </div>
                                 </div>
                             </div>
-                            <table class="music-table">
+                            <table class="music-table head-only">
                                 <thead>
                                     <tr>
                                         <th></th>      <th>歌曲名</th>      <th>歌手</th>      <th>收藏</th>      <th class="download-col">下载</th>
@@ -162,15 +161,27 @@
                             </table>
                             <div class="table-scroll">
                                 <table class="music-table currentList" for="defaultPlaylist">
-                                    <tbody class="list_data"></tbody>
-                                </table>
-                                <table class="music-table" for="myPlaylist">
+                                    <thead>
+                                        <tr>
+                                            <th></th>      <th>歌曲名</th>      <th>歌手</th>      <th>收藏</th>      <th class="download-col">下载</th>
+                                        </tr>
+                                    </thead>
                                     <tbody class="list_data"></tbody>
                                 </table>
                                 <table class="music-table" for="myFavorites">
+                                    <thead>
+                                        <tr>
+                                            <th></th>      <th>歌曲名</th>      <th>歌手</th>      <th>收藏</th>      <th class="download-col">下载</th>
+                                        </tr>
+                                    </thead>
                                     <tbody class="list_data"></tbody>
                                 </table>
                                 <table class="music-table" for="searchList">
+                                    <thead>
+                                        <tr>
+                                            <th></th>      <th>歌曲名</th>      <th>歌手</th>      <th>收藏</th>      <th class="download-col">下载</th>
+                                        </tr>
+                                    </thead>
                                     <tbody class="list_data"></tbody>
                                 </table>
                             </div>
@@ -186,9 +197,11 @@
                             </div>
                         </div>
                         <div class="wyy-playlist webTab"></div>
+                        <div class="wyy-toplist webTab"></div>
                     </div>
                 </div>
                 <div class="yyMusicLrc">
+                    <a class="yy-lrc-back" title="返回列表">&#8249;&nbsp;返回列表</a>
                     <div class="yyMusicLrc_w">
                         <div class="yyMusicAlbum">
                             <div class="albumPoster">
@@ -280,7 +293,15 @@
 				$(that.elem+" .wyy-playlist").show();
 				break;
 			case 'toplist':
-			    layer.msg('功能开发中');
+			    that.toplist();
+				$(that.elem+" .toplist").addClass("onNav").siblings().removeClass("onNav");
+				$(that.elem+" .webTab").hide();
+				$(that.elem+" .wyy-toplist").show();
+				break;
+			case 'search':
+			    let keyword = getHash('keyword');
+			    that.search(keyword);
+			    $(that.elem + " #keyword").val(keyword);
 				break;
 			case 'musiclists':
 			default:
@@ -289,10 +310,39 @@
     			$(that.elem+' .music-data-list').show();
 		}
 	};
+	yyMusic.prototype.toplist = function(id, page=1){
+        let that = this;
+		$.get(that.apiUrl('API/toplist.php'),{id: id, page: page},(res)=>{
+		    if(res.code == 0){
+		        var div = `<h2>TOP排行榜</h2>
+                    <table class="music-table">
+                        <thead>
+                            <tr>
+                                <th></th>      <th>歌曲名</th>      <th>歌手</th>      <th>收藏</th>      <th class="download-col">下载</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+		        for(var i=0; i< res.data.length; i++){
+    		        let item = res.data[i];
+    		        let curr = item.mid === that.data.currMid ? 'curr' : '';
+                    let hasFav = that.data.myFavorites.findIndex(s => s.mid === item.mid) !== -1;
+    		        let image = i<3 ? (i+1)+". <image class='topImage' src='"+item.SongPoster+"'></image>": (i+1)+'. ';
+    		        div += `<tr class="mid_${item.mid} ${curr}">
+        				<td></td>
+        				<td><a class="top_a" act="PlayAudio" data-opt='${JSON.stringify(item)}' data-mid="${item.mid}" title="${item.SongName}">${image+item.SongName}</a></td>
+        				<td>${item.singer || '未知歌手'}</td>
+        				<td><span class="Favorite yymc ${hasFav ? 'yymc-fav-a' : 'yymc-fav'} FavMid_${item.mid}" data-opt='${JSON.stringify(item)}'></span></td>
+        				<td class="download-col"><a class="downloadBtn" data-opt='${JSON.stringify(item)}' title="下载">下载</a></td>
+        			</tr>`;
+		        }
+    		    div += `</tbody></table>`;
+    		    $(that.elem+' .wyy-toplist').html(div);
+				$('title').text(res.title);
+	        }
+        }, "json");
+	}
 	yyMusic.prototype.playlist = function(playlistId){
         let that = this;
-        let $box = $(that.elem+' .wyy-playlist');
-        $box.html('<div class="data-null">正在加载歌单…</div>');
 		$.get(that.apiUrl('API/'),{playlist: playlistId},(res)=>{
 		    if(res.code == 0){
         	    var div =  `<div class="listInfo ${res.image && 'showImg'}">
@@ -300,6 +350,9 @@
                         <div class="listTitle">
                             <h2>${res.title}</h2>
                             <p>${res.description}</p>
+                            <div class="playlists_btns">
+                                <a href="javascript:history.back()">返回</a>
+                            </div>
                         </div>
                     </div>
                     <table class="music-table">
@@ -318,30 +371,17 @@
         				<td><a act="PlayAudio" data-opt='${JSON.stringify(item)}' data-mid="${item.mid}" title="${item.SongName}">${item.SongName}</a></td>
         				<td>${item.singer || '未知歌手'}</td>
         				<td><span class="Favorite yymc ${hasFav ? 'yymc-fav-a' : 'yymc-fav'} FavMid_${item.mid}" data-opt='${JSON.stringify(item)}'></span></td>
-				<td class="download-col"><a class="downloadBtn" data-opt='${JSON.stringify(item)}' title="下载">下载</a></td>
+        				<td class="download-col"><a class="downloadBtn" data-opt='${JSON.stringify(item)}' title="下载">下载</a></td>
         			</tr>`;
     		    }
     		    div += `</tbody></table>`;
-    		    $box.html(div);
+    		    $(that.elem+' .wyy-playlist').html(div);
 				$('title').text(res.title);
-	        } else {
-                $box.html('<div class="data-null">歌单详情加载失败：' + ((res && res.msg) || '暂无数据') + '</div>');
-            }
-        }, "json").fail(function(xhr){
-            var st = xhr ? xhr.status : 0;
-            $box.html('<div class="data-null">歌单详情加载失败：' +
-                (st === 0 ? '无法连接服务器（检查服务器地址）' : 'HTTP ' + st) + '</div>');
-        });
+	        }
+        }, "json");
 	};
     yyMusic.prototype.playlists = function (cat, page=1) {
         let that = this;
-        let $box = $(that.elem+' .wyy-data_list');
-        $box.html('<div class="data-null">正在加载歌单…</div>');
-        let failHtml = function(msg){
-            $box.html('<div class="data-null">歌单加载失败：' + msg +
-                '<br><a href="javascript:;" id="yeyuPlRetry" style="color:#6ea8ff">点击重试</a></div>');
-            $('#yeyuPlRetry').off('click').on('click', function(){ that.playlists(cat, page); });
-        };
 		$.get(that.apiUrl('API/playlist.php'),{cat: cat,page: page},(res)=>{
 		    if(res.code == 0){
     		    var div = '';
@@ -356,20 +396,12 @@
                         <p class="playlistAuthor">by：${item.author}</p>
                     </a></div>`;
     		    }
-    		    $box.html(div);
+    		    $(that.elem+' .wyy-data_list').html(div);
     			$('.currCat').removeClass("currCat");
     			$("[cat='" + cat + "']").addClass("currCat");
 				$('title').text(cat+ ' - 分类歌单');
-		    } else {
-                failHtml(res && res.msg ? res.msg : '暂无歌单');
-            }
-		}, "json").fail(function(xhr){
-            var st = xhr ? xhr.status : 0;
-            var tip = st === 404 ? '服务器上未找到 API/playlist.php（请重新上传 API 部署包）'
-                    : (st === 0 ? '无法连接服务器（检查服务器地址 / 是否被强制跳转 HTTPS）'
-                                : 'HTTP ' + st + '（服务端错误）');
-            failHtml(tip);
-        });
+		    }
+		}, "json");
 	};
     yyMusic.prototype.renderPlayerlist = function () {
         let that = this;
@@ -384,7 +416,7 @@
                     <td><a data-mid="${item.mid}" title="${item.SongName}">${item.SongName}</a></td>
                     <td>${item.singer || '未知歌手'}</td>
                     <td><span class="Favorite yymc ${hasFav ? 'yymc-fav-a' : 'yymc-fav'} FavMid_${item.mid}" data-opt='${JSON.stringify(item)}'></span></td>
-				<td class="download-col"><a class="downloadBtn" data-opt='${JSON.stringify(item)}' title="下载">下载</a></td>
+                    <td class="download-col"><a class="downloadBtn" data-opt='${JSON.stringify(item)}' title="下载">下载</a></td>
                 </tr>
             `);
             $tbody.append(tr);
@@ -414,132 +446,6 @@
             layer.msg('成功收藏《'+option.SongName+'》', {offset: 'rt', anim: 'slideLeft'});
         }
         setData("myFavorites", that.data.myFavorites);
-    };
-
-    /* 点击「下载」：先弹窗询问保存到「当前目录」还是「默认目录」，再执行下载 */
-    yyMusic.prototype.downloadSong = function(item) {
-        let that = this;
-        let url = item.SongUrl;
-        if (!url) { layer.msg('暂无下载地址', {offset:'rt', anim:'slideLeft'}); return; }
-        if (that._isAndroid()) { that._downloadAndroid(item); return; }
-        let name = (item.SongName || 'song').replace(/[\\/:*?"<>|\n\r\t]/g, '_').slice(0, 80);
-        let w = window.yeyu;
-        let configuredP = (w && w.getDownloadDir) ? w.getDownloadDir() : Promise.resolve('');
-        let defaultP = (w && w.getDefaultDir) ? w.getDefaultDir() : Promise.resolve('');
-        Promise.all([configuredP, defaultP]).then(function(dirs){
-            let configured = (dirs[0] && String(dirs[0]).trim()) ? String(dirs[0]).trim() : '';
-            let systemDefault = (dirs[1] && String(dirs[1]).trim()) ? String(dirs[1]).trim() : '';
-            let currentDir = configured || systemDefault;
-            that._showDownloadChoice(item, url, name, currentDir, systemDefault);
-        }).catch(function(){
-            that._doDownload(item, url, name, '');
-        });
-    };
-
-    /* 下载目录选择弹窗：当前目录 = 设置里已配置的目录；默认目录 = 系统「下载」文件夹 */
-    yyMusic.prototype._showDownloadChoice = function(item, url, name, currentDir, systemDefault) {
-        let that = this;
-        let sameDir = (!currentDir || currentDir === systemDefault);
-        let esc = function(s){ return String(s).replace(/</g, '&lt;').replace(/>/g, '&gt;'); };
-        let mainBtns;
-        if (sameDir) {
-            mainBtns = `<button id="yeyuDlDefault" style="flex:1;padding:9px 0;border:1px solid #2b6cff;background:#2b6cff;color:#fff;border-radius:6px;cursor:pointer;font-size:13px;">保存到下载目录</button>`;
-        } else {
-            mainBtns = `<button id="yeyuDlCurrent" style="flex:1;padding:9px 0;border:1px solid #2b6cff;background:#2b6cff;color:#fff;border-radius:6px;cursor:pointer;font-size:13px;">保存到当前目录</button>`
-                     + `<button id="yeyuDlDefault" style="flex:1;padding:9px 0;border:1px solid #444;background:#2a2a2a;color:#ddd;border-radius:6px;cursor:pointer;font-size:13px;">保存到默认目录</button>`;
-        }
-        let html = `
-        <div style="padding:16px 18px;min-width:300px;color:#e8e8e8;font-family:inherit;">
-            <div style="font-size:14px;font-weight:600;margin-bottom:4px;">下载《${esc(item.SongName || '')}》</div>
-            <div style="font-size:12px;color:#999;margin-bottom:14px;">请选择保存位置：</div>
-            <div style="font-size:12px;color:#bbb;line-height:1.8;">
-                ${ sameDir ? '' : `当前目录：<span style="color:#9fc">${esc(currentDir)}</span><br>` }
-                默认目录：<span style="color:#9fc">${esc(systemDefault)}</span>
-            </div>
-            <div style="margin-top:16px;display:flex;gap:10px;">${mainBtns}</div>
-            <button id="yeyuDlBrowse" style="width:100%;margin-top:12px;padding:9px 0;border:1px solid #2b6cff;background:transparent;color:#6ea8ff;border-radius:6px;cursor:pointer;font-size:13px;">选择其他目录…</button>
-            <div style="margin-top:12px;text-align:right;">
-                <button id="yeyuDlCancel" style="padding:6px 14px;border:1px solid #444;background:transparent;color:#999;border-radius:6px;cursor:pointer;font-size:12px;">取消</button>
-            </div>
-        </div>`;
-        layer.open({
-            type: 1,
-            title: '歌曲下载',
-            area: ['360px', 'auto'],
-            shadeClose: true,
-            content: html
-        });
-        $(document).off('click.yeyuDlChoice');
-        if (!sameDir) {
-            $(document).on('click.yeyuDlChoice', '#yeyuDlCurrent', function() {
-                layer.closeAll();
-                that._doDownload(item, url, name, currentDir);
-            });
-        }
-        $(document).on('click.yeyuDlChoice', '#yeyuDlDefault', function() {
-            layer.closeAll();
-            that._doDownload(item, url, name, systemDefault);
-        });
-        $(document).on('click.yeyuDlChoice', '#yeyuDlBrowse', function() {
-            layer.closeAll();
-            that._browseAndDownload(item, url, name);
-        });
-        $(document).on('click.yeyuDlChoice', '#yeyuDlCancel', function() {
-            layer.closeAll();
-        });
-    };
-
-    /* 选择目录：打开系统文件夹选择框，把歌曲下载到所选目录，并设为默认下载目录 */
-    yyMusic.prototype._browseAndDownload = function(item, url, name) {
-        let that = this;
-        if (!window.yeyu || !window.yeyu.pickDownloadDir) {
-            layer.msg('当前环境不支持选择目录，将保存到默认目录', {offset:'rt', anim:'slideLeft'});
-            that._doDownload(item, url, name, '');
-            return;
-        }
-        layer.msg('请选择下载目录…', {offset:'rt', anim:'slideLeft'});
-        window.yeyu.pickDownloadDir().then(function(res) {
-            if (res && res.path) {
-                that._doDownload(item, url, name, res.path);
-                layer.msg('已下载到所选目录，并设为默认下载目录', {offset:'rt', anim:'slideLeft'});
-            } else if (res && res.cancelled) {
-                // 取消选择：重新打开下载位置弹窗
-                let w = window.yeyu;
-                Promise.all([
-                    w.getDownloadDir ? w.getDownloadDir() : Promise.resolve(''),
-                    w.getDefaultDir ? w.getDefaultDir() : Promise.resolve('')
-                ]).then(function(dirs){
-                    let configured = (dirs[0] && String(dirs[0]).trim()) ? String(dirs[0]).trim() : '';
-                    let systemDefault = (dirs[1] && String(dirs[1]).trim()) ? String(dirs[1]).trim() : '';
-                    that._showDownloadChoice(item, url, name, configured || systemDefault, systemDefault);
-                });
-            } else if (res && res.error) {
-                layer.msg('选择失败：' + res.error, {offset:'rt', anim:'slideLeft'});
-            }
-        }).catch(function(e){
-            layer.msg('选择失败：' + (e && e.message || e), {offset:'rt', anim:'slideLeft'});
-        });
-    };
-
-    /* 实际触发下载：先把目标目录与文件名告知主进程，再点击 <a download> */
-    yyMusic.prototype._doDownload = function(item, url, name, dir) {
-        let that = this;
-        layer.msg('正在下载《' + (item.SongName || '') + '》…', {offset:'rt', anim:'slideLeft'});
-        let proceed = function() {
-            let a = document.createElement('a');
-            a.href = url;
-            a.download = name + '.mp3';
-            a.style.display = 'none';
-            document.body.appendChild(a);
-            a.click();
-            setTimeout(function(){ if (a.parentNode) a.parentNode.removeChild(a); }, 1500);
-        };
-        let w = window.yeyu;
-        if (w && w.setDownloadTarget) {
-            w.setDownloadTarget(dir || '', name).then(proceed).catch(proceed);
-        } else {
-            proceed();
-        }
     };
 
 	yyMusic.prototype.on = function(callback) {
@@ -631,7 +537,7 @@
         				<td><a data-mid="${item.mid}" title="${item.SongName}">${item.SongName}</a></td>
         				<td>${item.singer || '未知歌手'}</td>
         				<td><span class="Favorite yymc ${hasFav ? 'yymc-fav-a' : 'yymc-fav'} FavMid_${item.mid}" data-opt='${JSON.stringify(item)}'></span></td>
-				<td class="download-col"><a class="downloadBtn" data-opt='${JSON.stringify(item)}' title="下载">下载</a></td>
+        				<td class="download-col"><a class="downloadBtn" data-opt='${JSON.stringify(item)}' title="下载">下载</a></td>
         			</tr>`;
     			var obj = {};
     			obj.mid = item.mid;
@@ -654,23 +560,26 @@
         			<td><a data-mid="${option.mid}" title="${option.SongName}">${option.SongName}</a></td>
         			<td>${option.singer || '未知歌手'}</td>
         			<td><span class="Favorite yymc ${hasFav ? 'yymc-fav-a' : 'yymc-fav'} FavMid_${option.mid}" data-opt='${JSON.stringify(option)}'></span></td>
-				<td class="download-col"><a class="downloadBtn" data-opt='${JSON.stringify(option)}' title="下载">下载</a></td>
+        			<td class="download-col"><a class="downloadBtn" data-opt='${JSON.stringify(option)}' title="下载">下载</a></td>
         		</tr>`;
     		that.data[forid].push(option);
     	} else if (isURL(option)) {
 			$.get(option, function(res) {
-			    var res = $.parseJSON(res);
-			    if(res.code == 0){
-    			    that.PlayData(res.data, forid);
+			    var data = res;
+			    if (typeof data === 'string') {
+			        try { data = $.parseJSON(data); } catch (e) { data = null; }
+			    }
+			    if (data && data.code == 0 && data.data) {
+    			    that.PlayData(data.data, forid);
+			    } else {
+    			    layer.msg('列表加载失败', {offset: 'rt', anim: 'slideLeft'});
 			    }
     		}, "text").fail(function() {
     			layer.msg('列表加载失败', {offset: 'rt', anim: 'slideLeft'});
-    		},"json");
+    		});
     		return;
     	}
     	$(that.elem+' .yyMusicList .music-table[for="'+forid+'"]').find('.list_data').append(html);
-    	$(that.elem+' .list_bar').find('a#'+forid).addClass('currentListBtn').siblings().removeClass("currentListBtn");
-    	$(that.elem+' .music-table[for="'+forid+'"]').addClass('currentList').siblings().removeClass("currentList");
     	
     	setData('forid', forid);
     	setData(forid, that.data[forid]);
@@ -686,6 +595,408 @@
     		$(".table-scroll .curr").length&&$(".table-scroll").animate({scrollTop:Math.max($(".table-scroll .curr").position().top - 100,0)},300);
     	});
     };
+	yyMusic.prototype.play = function() {
+		var that = this;
+		that.audio.play();
+	};
+	yyMusic.prototype.pause = function() {
+		this.audio.pause();
+	};
+	yyMusic.prototype.paused = function() {
+		if (this.audio.paused) {
+			this.play();
+		} else {
+			this.pause();
+		}
+	};
+    yyMusic.prototype.nextPlay = function() {
+    	var that = this;
+    	var order = that.data.order;
+    
+    	var list = that.data.playlist || getData('playlist') || [];
+		var index = list.findIndex(s => s.mid === getData('currMid'));
+    	if (!list.length) return false;
+    
+    	if (order === 1) {
+    		that.PlayAudio(that.data.currentAudio);
+    		return false;
+    	} else if (order === 2) {
+    		index++;
+    		if (index >= list.length) {
+    			index = 0;
+    		}
+    		that.PlayAudio(list[index]);
+    	} else if (order === 3) {
+    		let currentIdx = list.findIndex(s => s.mid === that.data.currentAudio.mid);
+    		let rnd;
+    		do {
+    			rnd = Math.floor(Math.random() * list.length);
+    		} while (list.length > 1 && rnd === currentIdx);
+    		that.data.currIndex = rnd;
+    		that.PlayAudio(list[rnd]);
+    	}
+    };
+	yyMusic.prototype.AudioEvent = function() {
+		var that = this;
+    	win.addEventListener('hashchange', () => {
+    		that.Refresh();
+    	})
+		that.audio.addEventListener("play", function(e) {
+			$(that.elem).find("a.paused").find("i").addClass("yymc-pause").removeClass("yymc-play");
+			that.callback({
+				state: "play"
+			});
+		});
+		that.audio.addEventListener("pause", function(e) {
+			$(that.elem).find("a.paused").find("i").addClass("yymc-play").removeClass("yymc-pause");
+            layer.msg('已暂停', {offset: 'rt', anim: 'slideLeft'});
+			that.callback({
+				state: "pause"
+			});
+		});
+		that.audio.addEventListener("ended", function() {
+			that.nextPlay();
+            layer.msg('播放完成，切换下一首', {offset: 'rt', anim: 'slideLeft'});
+			that.callback({
+				state: "ended"
+			});
+		});
+		that.audio.addEventListener("durationchange", function() {
+			$(that.elem).find(".duration").text(formatTime(that.audio.duration));
+			that.callback({
+				duration: that.audio.duration
+			});
+		});
+		that.audio.addEventListener("timeupdate", function() {
+			that.callback({
+				currentTime: that.audio.currentTime
+			});
+			var currentTime = formatTime(that.audio.currentTime);
+			$(that.elem).find(".currentTime").text(currentTime);
+			$(that.elem).find(".progress").css("width", that.audio.currentTime / that.audio.duration * 100 + "%");
+			that.data.lyric && that.scrollLyric(that.audio.currentTime);
+		});
+		$(document).on("click", that.elem + " .paused", function() {
+			if (that.audio.paused) {
+				that.play();
+			} else {
+				that.pause();
+			}
+		});
+		$(document).on("click", that.elem + " .nextPlay", function() {
+			that.nextPlay();
+		});
+		$(document).on("click", that.elem + " .lrcline", function() {
+			var time = $(this).attr("data-time");
+			that.audio.currentTime = time;
+		});
+        $(document).on("click", that.elem + " .yyMusicList .list_item a", function() {
+            if ($(this).hasClass('downloadBtn')) return;
+            var forid = $(this).parents('.music-table').attr('for');
+            var mid = $(this).attr("data-mid");
+            var list;
+            if(forid === 'myFavorites'){
+                list = getData('myFavorites') || [];
+            }else{
+                list = that.data[forid];
+            }
+            var i = list.findIndex(s => s.mid == mid);
+            var opt = list[i];
+            that.PlayAudio(opt);
+            that.play();
+        });
+		$(document).on("click", that.elem + " .songlist", function() {
+			if ($(that.elem).find('.playlist').css('display') == 'none') {
+				$(that.elem).find('.playlist').fadeIn();
+			} else {
+			    $(that.elem).find('.playlist').fadeOut();
+			}
+		});
+		$(document).on("click", that.elem + " .playlist .shade", function() {
+            $(that.elem).find('.playlist').fadeOut();
+		});
+		$(document).on("click", that.elem + " .songlrc", function() {
+			that.toggleLyric();
+		});
+		$(document).on("click", that.elem + " .yy-lrc-back", function(e) {
+			e.preventDefault();
+			that.closeLyric();
+		});
+		$(document).on("click", that.elem + " .playlistData .list_item a", function() {
+			if ($(this).hasClass('downloadBtn')) return;
+			var mid = $(this).attr("data-mid");
+			var plist = that.data.playlist;
+			var i = plist.findIndex(s => s.mid == mid);
+			var opt = plist[i];
+			that.PlayAudio(opt);
+			that.play();
+		});
+		$(document).on("click", that.elem + " .order", function() {
+		    var order = that.data.order;
+		    var msg = '';
+			if(order === 1){
+			    order = 2;//循环
+			    msg = '列表循环';
+			    $(that.elem).find('.order').find('i').removeClass().addClass('yymc yymc-normal').attr('title', msg);
+			}
+			else if(order === 2){
+			    order = 3;//随机
+			    msg = '随机播放';
+			    $(that.elem).find('.order').find('i').removeClass().addClass('yymc yymc-random').attr('title', msg);
+			}
+			else if(order === 3){
+			    order = 1;//单曲
+			    msg = '单曲循环';
+			    $(that.elem).find('.order').find('i').removeClass().addClass('yymc yymc-repeat').attr('title', msg);
+			}
+			that.data.order = order;
+            setData("order", order);
+            layer.msg('已切换到 [ '+msg+' ] ', {offset: 'rt', anim: 'slideLeft'});
+		});
+		
+        $(document).on("click", that.elem + " .list_bar a", function() {
+            var forid = $(this).attr('id');
+            // 播放全部 / 导入歌单 由各自处理器处理
+            if(forid === 'playAll' || forid === 'importPlaylist') return;
+            if(forid === 'myFavorites'){
+                let favList = getData('myFavorites') || [];
+                let $tbody = $(that.elem+' .music-table[for="myFavorites"] .list_data');
+                $tbody.empty();
+                let html = '';
+                favList.forEach(item=>{
+                    if(!item.mid || !item.SongUrl) return;
+                    let curr = item.mid === getData('currMid') ? 'curr' : '';
+                    html += `<tr class="list_item mid_${item.mid} ${curr}">
+                        <td></td>
+                        <td><a data-mid="${item.mid}" title="${item.SongName}">${item.SongName}</a></td>
+                        <td>${item.singer || '未知歌手'}</td>
+                        <td><span class="Favorite yymc yymc-fav-a FavMid_${item.mid}" data-opt='${JSON.stringify(item)}'></span></td>
+                        <td class="download-col"><a class="downloadBtn" data-opt='${JSON.stringify(item)}' title="下载">下载</a></td>
+                    </tr>`;
+                })
+                $tbody.html(html);
+                $(that.elem+' .list_bar').find('a#'+forid).addClass('currentListBtn').siblings().removeClass("currentListBtn");
+                $(that.elem+' .music-table[for="'+forid+'"]').addClass('currentList').siblings().removeClass("currentList");
+
+                setData('forid', forid);
+                return;
+            }
+            $(that.elem+' .list_bar').find('a#'+forid).addClass('currentListBtn').siblings().removeClass("currentListBtn");
+            $(that.elem+' .music-table[for="'+forid+'"]').addClass('currentList').siblings().removeClass("currentList");
+            var listdata = getData(forid);
+            that.PlayData(listdata, forid);
+        });
+		$(document).on("click", that.elem + " .addPlaylist", function() {
+            layer.prompt({title: '输入歌单ID导入'}, function(value, index, elem){
+                if(value === '') return elem.focus();
+        			$.get(that.apiUrl('API/'), {playlist:value}, function(res) {
+        			    var res = $.parseJSON(res);
+        			    if(res.code == 0){
+            			    var myPlaylist = res.data;
+            				that.PlayData(myPlaylist, 'myPlaylist');
+            				setData('myPlaylist', myPlaylist);
+            				layer.msg('歌单导入成功', {offset: 'rt', anim: 'slideLeft'});
+        			    }
+        			}, "text").fail(function() {
+        				layer.msg('列表加载失败', {offset: 'rt', anim: 'slideLeft'});
+        			},"json");
+                layer.close(index);
+            });
+		});
+        $(document).on("click", that.elem + " .Download", function() {
+            var downloadMusic = async function(url, name="music.mp3") {
+                try {
+                    const res = await fetch(url);
+                    if (!res.ok) throw new Error();
+                    const blob = await res.blob();
+                    const u = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = u;
+                    a.download = name;
+                    a.click();
+                    URL.revokeObjectURL(u);
+                } catch (e) {
+                    win.open(url);
+                }
+            };
+            var downloadLyric = async function(url, name="lyric.txt") {
+                try {
+                    const res = await fetch(url);
+                    if (!res.ok) throw new Error();
+                    const blob = await res.blob();
+                    const u = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = u;
+                    a.download = name;
+                    a.click();
+                    URL.revokeObjectURL(u);
+                } catch (e) {
+                    win.open(url);
+                }
+            };
+            var downloadImage = async function(url, name="poster.jpg") {
+                try {
+                    const res = await fetch(url);
+                    if (!res.ok) throw new Error();
+                    const blob = await res.blob();
+                    const u = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = u;
+                    a.download = name;
+                    a.click();
+                    URL.revokeObjectURL(u);
+                } catch (e) {
+                    win.open(url);
+                }
+            };
+            var opt = $.parseJSON($(this).attr('data-opt'));
+            layer.open({
+                type: 0,
+                title: false,
+                shadeClose: true,
+                content: `
+                <h3 class="text-center">《${opt.SongName}》</h3>
+                <dl class="text-center">${opt.singer}</dl>
+                <a class="DownloadMusic DownloadBtn">音乐下载</a>
+                <a class="DownloadLyric DownloadBtn">歌词下载</a>
+                <a class="DownloadImage DownloadBtn">海报下载</a>`,
+                btn: false,
+                success:function(layero){
+                    $(layero).find('.DownloadMusic').on('click',function(){
+                        downloadMusic(opt.SongUrl,opt.SongName+'.mp3');
+                    });
+                    $(layero).find('.DownloadLyric').on('click',function(){
+                        downloadLyric(opt.SongLrc,opt.SongName+'.txt');
+                    });
+                    $(layero).find('.DownloadImage').on('click',function(){
+                        downloadImage(opt.SongPoster,opt.SongName+'.jpg');
+                    });
+                    $(layero).find('.layui-layer-content').css({
+                        'background-image': 'linear-gradient(rgb(0 0 0 / 70%), rgba(0, 0, 0, 0.35)), url('+opt.SongPoster+')',
+                        'background-repeat': 'no-repeat',
+                        'background-size': 'cover',
+                        'background-position': 'center',
+                        'color': 'white'
+                    });
+                }
+            });
+        });
+		$(document).on("click", that.elem + " .playAllBtn", function() {
+            that.playAll();
+        });
+		$(document).on("click", that.elem + " .importBtn", function() {
+            that.importPlaylist();
+        });
+		$(document).on("click", that.elem + " #settingsBtn", function() {
+            that.settings();
+        });
+		$(document).on("click", that.elem + " .downloadBtn", function(e) {
+            e.preventDefault();
+            var raw = $(this).attr('data-opt');
+            var item = null;
+            try { item = $.parseJSON(raw); } catch (err) { item = null; }
+            if (!item || !item.SongUrl) { layer.msg('暂无下载地址', {offset:'rt', anim:'slideLeft'}); return; }
+            that.downloadSong(item);
+        });
+		$(document).on("click", that.elem + " .Favorite", function() {
+		    var option = $(this).attr('data-opt');
+            that.favorite($.parseJSON(option));
+		});
+		$(document).on("click", that.elem + " [act='PlayAudio']", function() {
+		    var option = $(this).attr('data-opt');
+            that.PlayAudio($.parseJSON(option));
+		});
+        $(document).on('submit', that.elem + " #search",function(e){
+            e.preventDefault();
+            let value = $(that.elem + " #keyword").val().trim();
+            if(value === '') return elem.focus();
+            location.href="#m=search&keyword="+ value;
+            //that.search(value);
+            return false;
+        });
+	};
+    /* 点击「下载」：弹出下载面板（音乐 / 歌词 / 海报） */
+    yyMusic.prototype.downloadSong = function(item) {
+        let that = this;
+        that._showDownloadPanel(item, '');
+    };
+
+    /* 下载面板：封面做背景，三个下载入口；Android 写手机存储，其余走浏览器下载 */
+    yyMusic.prototype._showDownloadPanel = function(item, dir) {
+        let that = this;
+        let android = that._isAndroid();
+        let esc = function(v) {
+            return String(v == null ? '' : v)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        };
+        let safeName = function(v) {
+            return String(v == null ? '' : v).replace(/[\\/:*?"<>|\n\r\t]/g, '_').slice(0, 60) || '未命名';
+        };
+        let songName = safeName(item.SongName);
+        let singer = item.singer || '';
+        let poster = item.SongPoster || '';
+        let bg = poster
+            ? 'linear-gradient(rgba(0,0,0,.86), rgba(0,0,0,.74)), url("' + poster.replace(/"/g, '%22') + '")'
+            : 'linear-gradient(160deg, #33465e, #131a23)';
+        let dirText = android ? '手机存储/Documents' : (dir || '系统下载目录');
+
+        let html = ''
+            + '<div class="yy-dl-panel">'
+            +   '<a class="yy-dl-close" title="关闭">&#10005;</a>'
+            +   '<div class="yy-dl-bg"></div>'
+            +   '<div class="yy-dl-body">'
+            +     '<div class="yy-dl-title">《' + esc(item.SongName || '未命名') + '》</div>'
+            +     '<div class="yy-dl-singer">' + esc(singer || '未知歌手') + '</div>'
+            +     '<a class="DownloadBtn DownloadMusic yy-dl-btn" data-kind="music">&#8595;&nbsp;音乐下载</a>'
+            +     '<a class="DownloadBtn DownloadLyric yy-dl-btn" data-kind="lyric">&#8595;&nbsp;歌词下载</a>'
+            +     '<a class="DownloadBtn DownloadImage yy-dl-btn" data-kind="image">&#8595;&nbsp;海报下载</a>'
+            +     '<div class="yy-dl-dir"><span class="yy-dl-dir-text">保存到：<em class="yy-dl-dir-path">' + esc(dirText) + '</em></span></div>'
+            +   '</div>'
+            + '</div>';
+
+        layer.open({
+            type: 1,
+            title: false,
+            closeBtn: 0,
+            shade: [0.45, '#000'],
+            shadeClose: true,
+            area: ['86%', 'auto'],
+            content: html,
+            success: function(layero) {
+                let $p = $(layero).find('.yy-dl-panel');
+                $p.find('.yy-dl-bg').css('background-image', bg);
+                $p.find('.yy-dl-close').on('click', function() { layer.closeAll(); });
+                $p.find('.yy-dl-btn').on('click', function() {
+                    let kind = $(this).attr('data-kind');
+                    if (android) { that._downloadAndroid(item, kind); return; }
+                    if (kind === 'music') {
+                        if (!item.SongUrl) { layer.msg('暂无音乐地址', {offset:'rt', anim:'slideLeft'}); return; }
+                        that._doDownload(item.SongUrl, songName + '.mp3', dir);
+                    } else if (kind === 'lyric') {
+                        if (!item.SongLrc) { layer.msg('暂无歌词', {offset:'rt', anim:'slideLeft'}); return; }
+                        that._doDownload(item.SongLrc, songName + '.lrc', dir);
+                    } else {
+                        if (!item.SongPoster) { layer.msg('暂无海报', {offset:'rt', anim:'slideLeft'}); return; }
+                        that._doDownload(item.SongPoster, songName + '.jpg', dir);
+                    }
+                });
+            }
+        });
+    };
+
+    /* 浏览器环境下的下载 */
+    yyMusic.prototype._doDownload = function(url, fileName, dir) {
+        layer.msg('正在下载：' + fileName, {offset:'rt', anim:'slideLeft'});
+        let a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(function(){ if (a.parentNode) a.parentNode.removeChild(a); }, 1500);
+    };
+
     /* 播放全部：播放当前列表中的每一首 */
     yyMusic.prototype.playAll = function() {
         let that = this;
@@ -802,290 +1113,21 @@
             window.yeyu.openDownloadDir().catch(function() {});
         });
     };
-	yyMusic.prototype.play = function() {
+	yyMusic.prototype.search = function(value){
 		var that = this;
-		that.audio.play();
-	};
-	yyMusic.prototype.pause = function() {
-		this.audio.pause();
-	};
-	yyMusic.prototype.paused = function() {
-		if (this.audio.paused) {
-			this.play();
-		} else {
-			this.pause();
-		}
-	};
-    yyMusic.prototype.nextPlay = function() {
-    	var that = this;
-    	var order = that.data.order;
-    
-    	var list = that.data.playlist || getData('playlist') || [];
-		var index = list.findIndex(s => s.mid === getData('currMid'));
-    	if (!list.length) return false;
-    
-    	if (order === 1) {
-    		that.PlayAudio(that.data.currentAudio);
-    		return false;
-    	} else if (order === 2) {
-    		index++;
-    		if (index >= list.length) {
-    			index = 0;
-    		}
-    		that.PlayAudio(list[index]);
-    	} else if (order === 3) {
-    		let currentIdx = list.findIndex(s => s.mid === that.data.currentAudio.mid);
-    		let rnd;
-    		do {
-    			rnd = Math.floor(Math.random() * list.length);
-    		} while (list.length > 1 && rnd === currentIdx);
-    		that.data.currIndex = rnd;
-    		that.PlayAudio(list[rnd]);
-    	}
-    };
-	yyMusic.prototype.AudioEvent = function() {
-		var that = this;
-    	win.addEventListener('hashchange', () => {
-    		that.Refresh();
-    	})
-		that.audio.addEventListener("play", function(e) {
-			$(that.elem).find("a.paused").find("i").addClass("yymc-pause").removeClass("yymc-play");
-			that.callback({
-				state: "play"
-			});
-		});
-		that.audio.addEventListener("pause", function(e) {
-			$(that.elem).find("a.paused").find("i").addClass("yymc-play").removeClass("yymc-pause");
-            layer.msg('已暂停', {offset: 'rt', anim: 'slideLeft'});
-			that.callback({
-				state: "pause"
-			});
-		});
-		that.audio.addEventListener("ended", function() {
-			that.nextPlay();
-            layer.msg('播放完成，切换下一首', {offset: 'rt', anim: 'slideLeft'});
-			that.callback({
-				state: "ended"
-			});
-		});
-		// 播放失败（歌曲下架 / 取不到音源 / 网络中断）：自动跳下一首，
-		// 连续失败多首则停下提示，避免无限快速切歌
-		that.audio.addEventListener("error", function() {
-			that._failCount = (that._failCount || 0) + 1;
-			if (that._failCount >= 3) {
-				that._failCount = 0;
-				layer.msg('连续多首无法播放，请检查网络后重试', {offset: 'rt', anim: 'slideLeft'});
-				return;
-			}
-			layer.msg('该歌曲暂时无法播放，自动切换下一首', {offset: 'rt', anim: 'slideLeft'});
-			setTimeout(function() {
-				that.nextPlay();
-			}, 900);
-		});
-		that.audio.addEventListener("loadedmetadata", function() {
-			that._failCount = 0;
-			// 网易云对版权/付费歌曲在未授权时只给 30 秒试听片段，这里明确提示，
-			// 避免用户误以为是软件故障
-			if (that.audio.duration > 0 && that.audio.duration < 31) {
-				layer.msg('此曲仅有 30 秒试听（版权限制）', {offset: 'rt', anim: 'slideLeft'});
-			}
-		});
-		that.audio.addEventListener("durationchange", function() {
-			$(that.elem).find(".duration").text(formatTime(that.audio.duration));
-			that.callback({
-				duration: that.audio.duration
-			});
-		});
-		that.audio.addEventListener("timeupdate", function() {
-			that.callback({
-				currentTime: that.audio.currentTime
-			});
-			var currentTime = formatTime(that.audio.currentTime);
-			$(that.elem).find(".currentTime").text(currentTime);
-			$(that.elem).find(".progress").css("width", that.audio.currentTime / that.audio.duration * 100 + "%");
-			that.data.lyric && that.scrollLyric(that.audio.currentTime);
-		});
-		$(document).on("click", that.elem + " .paused", function() {
-			if (that.audio.paused) {
-				that.play();
-			} else {
-				that.pause();
-			}
-		});
-		$(document).on("click", that.elem + " .nextPlay", function() {
-			that.nextPlay();
-		});
-		$(document).on("click", that.elem + " .lrcline", function() {
-			var time = $(this).attr("data-time");
-			that.audio.currentTime = time;
-		});
-        $(document).on("click", that.elem + " .yyMusicList .list_item a", function() {
-            if ($(this).hasClass('downloadBtn')) return;
-            var forid = $(this).parents('.music-table').attr('for');
-            var mid = $(this).attr("data-mid");
-            var list;
-            if(forid === 'myFavorites'){
-                list = getData('myFavorites') || [];
-            }else{
-                list = that.data[forid];
-            }
-            var i = list.findIndex(s => s.mid == mid);
-            var opt = list[i];
-            that.PlayAudio(opt);
-            that.play();
-        });
-		$(document).on("click", that.elem + " .songlist", function() {
-			if ($(that.elem).find('.playlist').css('display') == 'none') {
-				$(that.elem).find('.playlist').fadeIn();
-			} else {
-			    $(that.elem).find('.playlist').fadeOut();
-			}
-		});
-		$(document).on("click", that.elem + " .playlist .shade", function() {
-            $(that.elem).find('.playlist').fadeOut();
-		});
-		$(document).on("click", that.elem + " .songlrc", function() {
-			if ($(that.elem).find('.yyMusicLrc').css('display') == 'none') {
-				$(that.elem).find('.yyMusicLrc').fadeIn();
-				$(that.elem).find('.yyMusicList').css('opacity', 0);
-			} else {
-			    $(that.elem).find('.yyMusicLrc').fadeOut();
-				$(that.elem).find('.yyMusicList').fadeTo(500, 1);
-			}
-		});
-		$(document).on("click", that.elem + " .playlistData .list_item a", function() {
-			if ($(this).hasClass('downloadBtn')) return;
-			var mid = $(this).attr("data-mid");
-			var plist = that.data.playlist;
-			var i = plist.findIndex(s => s.mid == mid);
-			var opt = plist[i];
-			that.PlayAudio(opt);
-			that.play();
-		});
-		$(document).on("click", that.elem + " .order", function() {
-		    var order = that.data.order;
-		    var msg = '';
-			if(order === 1){
-			    order = 2;//循环
-			    msg = '列表循环';
-			    $(that.elem).find('.order').find('i').removeClass().addClass('yymc yymc-normal').attr('title', msg);
-			}
-			else if(order === 2){
-			    order = 3;//随机
-			    msg = '随机播放';
-			    $(that.elem).find('.order').find('i').removeClass().addClass('yymc yymc-random').attr('title', msg);
-			}
-			else if(order === 3){
-			    order = 1;//单曲
-			    msg = '单曲循环';
-			    $(that.elem).find('.order').find('i').removeClass().addClass('yymc yymc-repeat').attr('title', msg);
-			}
-			that.data.order = order;
-            setData("order", order);
-            layer.msg('已切换到 [ '+msg+' ] ', {offset: 'rt', anim: 'slideLeft'});
-		});
-        $(document).on("click", that.elem + " .list_bar a", function() {
-            var forid = $(this).attr('id');
-            // 播放全部 / 导入歌单 由各自处理器处理，避免被当成列表标签切换
-            if(forid === 'playAll' || forid === 'importPlaylist') return;
-            if(forid === 'myFavorites'){
-                let favList = getData('myFavorites') || [];
-                let $tbody = $(that.elem+' .music-table[for="myFavorites"] .list_data');
-                $tbody.empty();
-                let html = '';
-                favList.forEach(item=>{
-                    if(!item.mid || !item.SongUrl) return;
-                    let curr = item.mid === getData('currMid') ? 'curr' : '';
-                    html += `<tr class="list_item mid_${item.mid} ${curr}">
-                        <td></td>
-                        <td><a data-mid="${item.mid}" title="${item.SongName}">${item.SongName}</a></td>
-                        <td>${item.singer || '未知歌手'}</td>
-                        <td><span class="Favorite yymc yymc-fav-a FavMid_${item.mid}" data-opt='${JSON.stringify(item)}'></span></td>
-				<td class="download-col"><a class="downloadBtn" data-opt='${JSON.stringify(item)}' title="下载">下载</a></td>
-                    </tr>`;
-                })
-                $tbody.html(html);
-                $(that.elem+' .list_bar').find('a#'+forid).addClass('currentListBtn').siblings().removeClass("currentListBtn");
-                $(that.elem+' .music-table[for="'+forid+'"]').addClass('currentList').siblings().removeClass("currentList");
-                setData('forid', forid);
-                return;
-            }
-            var listdata = getData(forid);
-            that.PlayData(listdata, forid);
-        });
-		$(document).on("click", that.elem + " .addPlaylist", function() {
-            layer.prompt({title: '输入歌单ID导入'}, function(value, index, elem){
-                if(value === '') return elem.focus();
-        			$.get(that.apiUrl('API/'), {playlist:value}, function(res) {
-        			    var res = $.parseJSON(res);
-        			    if(res.code == 0){
-            			    var myPlaylist = res.data;
-            				that.PlayData(myPlaylist, 'myPlaylist');
-            				setData('myPlaylist', myPlaylist);
-            				layer.msg('歌单导入成功', {offset: 'rt', anim: 'slideLeft'});
-        			    }
-        			}, "text").fail(function() {
-        				layer.msg('列表加载失败', {offset: 'rt', anim: 'slideLeft'});
-        			},"json");
-                layer.close(index);
-            });
-		});
-		$(document).on("click", that.elem + " .playAllBtn", function() {
-            that.playAll();
-        });
-		$(document).on("click", that.elem + " .importBtn", function() {
-            that.importPlaylist();
-        });
-		$(document).on("click", that.elem + " #settingsBtn", function() {
-            that.settings();
-        });
-		$(document).on("click", that.elem + " .downloadBtn", function(e) {
-            e.preventDefault();
-            var raw = $(this).attr('data-opt');
-            var item = null;
-            try { item = $.parseJSON(raw); } catch (err) { item = null; }
-            if (!item || !item.SongUrl) { layer.msg('暂无下载地址', {offset:'rt', anim:'slideLeft'}); return; }
-            that.downloadSong(item);
-        });
-		$(document).on("click", that.elem + " .Favorite", function() {
-		    var option = $(this).attr('data-opt');
-            that.favorite($.parseJSON(option));
-		});
-		$(document).on("click", that.elem + " [act='PlayAudio']", function() {
-		    var option = $(this).attr('data-opt');
-            that.PlayAudio($.parseJSON(option));
-		});
-        $(document).on('submit', that.elem + " #search",function(e){
-            e.preventDefault();
-            let value = $(that.elem + " #keyword").val().trim();
-            if(value === '') return elem.focus();
-			$.get(that.apiUrl('API/'), {key:value}, function(res) {
-			    var res = $.parseJSON(res);
-			    if(res.code == 0){
-    			    var searchList = res.data;
-    			    $(that.elem).find('.music-table[for="searchList"] .list_data').empty();
-    				that.PlayData(searchList, 'searchList');
-			    }
-			}, "text").fail(function() {
-				layer.msg('列表加载失败', {offset: 'rt', anim: 'slideLeft'});
-			},"json");
-            return false;
-        })
-		$(document).on("click", that.elem + " .searchBtn i.submit", function() {
-            var value = $(that.elem + " .searchBtn input").val();
-            if(value === '') return elem.focus();
-			$.get(that.apiUrl('API/'), {key:value}, function(res) {
-			    var res = $.parseJSON(res);
-			    if(res.code == 0){
-    			    var searchList = res.data;
-    			    $(that.elem).find('.music-table[for="searchList"] .list_data').empty();
-    				that.PlayData(searchList, 'searchList');
-			    }
-			}, "text").fail(function() {
-				layer.msg('列表加载失败', {offset: 'rt', anim: 'slideLeft'});
-			},"json");
-		});
-	};
+	    if(value === '') return false;
+		$.get(that.apiUrl('API/'), {key:value}, function(res) {
+		    var res = $.parseJSON(res);
+		    if(res.code == 0){
+			    var searchList = res.data;
+			    $(that.elem+' .music-table[for="searchList"] .list_data').empty();
+				that.PlayData(searchList, 'searchList');
+                $(that.elem+' .music-table[for="searchList"]').addClass('currentList').siblings().removeClass("currentList");
+		    }
+		}, "text").fail(function() {
+			layer.msg('列表加载失败', {offset: 'rt', anim: 'slideLeft'});
+		},"json");
+	}
 	yyMusic.prototype.parseLyric = function(lrc) {
 		var that = this;
 		if (lrc === "") return "";
@@ -1130,7 +1172,7 @@
 		for (var k in that.data.lyric) {
 			var txt = that.data.lyric[k];
 			if (!txt) txt = '《'+that.data.config.name+'》';
-			var li = $("<li data-time='" + k + "' data-no='" + i + "' class='lrcline' title='跳转到 [" + formatTime(k) + "]'>" + txt + "</li>");
+			var li = $("<li data-time='" + k + "' data-no='" + i + "' class='lrcline' title='跳转到 [" + formatTime(k) + "]' data-txt='"+txt+"'>" + txt + "</li>");
 			$(that.elem).find(".loadLrc").append(li);
 			i++;
 		}
@@ -1151,27 +1193,91 @@
 			});
 		}
 	};
-	yyMusic.prototype.scrollLyric = function(time) {
-		var that = this;
-		if (that.data.lyric === "") return false;
-		time = parseInt(time);
-		if (that.data.lyric === undefined || that.data.lyric[time] === undefined) return false;
-		if (that.data.lastLyric == time) return true;
-		var i = 0;
-		for (var k in that.data.lyric) {
-			if (k == time) break;
-			i++;
-		}
-		that.data.lastLyric = time;
-		$(that.elem).find(".lrcline[data-no='" + i + "']").addClass("currline").siblings().removeClass("currline");
-		var scroll = $(that.elem).find(".loadLrc").children().height() * i - ($(that.elem).find('.lrcText').height() / 2 - $(that.elem).find(".currline").prev().height() - 15);
-		$(that.elem).find(".lrcText").stop().animate({
-			scrollTop: scroll
-		}, 500);
-		that.callback({
-			currentLyric: $(that.elem).find(".lrcline[data-no='" + i + "']").html()
-		});
-	}
+    /* ===== 歌词面板开合 =====
+       桌面：右侧栏常驻，按钮不显示；
+       手机（≤820px）：点击「词」全屏浮层展示歌词，点「返回列表」或再点「词」收回。 */
+    yyMusic.prototype.toggleLyric = function() {
+        var that = this;
+        var $lrc = $(that.elem).find('.yyMusicLrc');
+        if ($lrc.hasClass('lrcOpen')) {
+            that.closeLyric();
+        } else if (!$lrc.is(':visible')) {
+            that.openLyric();
+        }
+    };
+    yyMusic.prototype.openLyric = function() {
+        var that = this;
+        var $lrc = $(that.elem).find('.yyMusicLrc');
+        var $list = $(that.elem).find('.yyMusicList');
+        if ($lrc.hasClass('lrcOpen')) return;
+        $lrc.addClass('lrcOpen').stop(true, true).fadeIn(180);
+        $list.css({ opacity: 0, pointerEvents: 'none' });
+        $(that.elem).find('.songlrc').addClass('on');
+        /* 若歌词还没渲染（切歌后再点开等），补一次 */
+        var cur = that.data.currentAudio;
+        if ($lrc.find('.loadLrc li').length === 0 && cur && cur.SongLrc) {
+            that.lyricCallback(cur.SongLrc);
+        }
+        that.data.lastLyric = -1;
+        var ct = that.audio ? that.audio.currentTime : 0;
+        if (ct > 0) that.scrollLyric(ct);
+        /* 安卓实体返回键：先关歌词面板，而不是直接退出 App */
+        try {
+            if (window.history && history.pushState) {
+                that._lrcPushed = true;
+                history.pushState({ yyLrc: 1 }, '');
+            }
+        } catch (e) {}
+        if (!that._lrcPopBound) {
+            that._lrcPopBound = true;
+            $(window).on('popstate', function() {
+                if ($(that.elem).find('.yyMusicLrc').hasClass('lrcOpen')) that.closeLyric();
+            });
+        }
+    };
+    yyMusic.prototype.closeLyric = function() {
+        var that = this;
+        var $lrc = $(that.elem).find('.yyMusicLrc');
+        var $list = $(that.elem).find('.yyMusicList');
+        $lrc.removeClass('lrcOpen').stop(true, true).fadeOut(150);
+        $list.css({ opacity: 1, pointerEvents: '' });
+        $(that.elem).find('.songlrc').removeClass('on');
+        if (that._lrcPushed) {
+            that._lrcPushed = false;
+            try {
+                if (history.state && history.state.yyLrc) history.back();
+            } catch (e) {}
+        }
+    };
+    yyMusic.prototype.scrollLyric = function(time) {
+        var that = this;
+        if (that.data.lyric === "") return false;
+        time = parseInt(time);
+        if (that.data.lyric === undefined || that.data.lyric[time] === undefined) return false;
+        if (that.data.lastLyric == time) return true;
+    
+        var timeArr = Object.keys(that.data.lyric).map(Number).sort((a,b)=>a-b);
+        var idx = timeArr.indexOf(time);
+        var nextTime = timeArr[idx+1];
+        var durSec = nextTime ? (nextTime - time) : 3;
+        var i = 0;
+        for (var k in that.data.lyric) {
+            if (k == time) break;
+            i++;
+        }
+        that.data.lastLyric = time;
+        var $currLine = $(that.elem).find(".lrcline[data-no='" + i + "']");
+        $currLine.addClass("currline").siblings().removeClass("currline");
+        $currLine.css("--dur", durSec + "s");
+
+        var scroll = $(that.elem).find(".loadLrc").children().height() * i - ($(that.elem).find('.lrcText').height() / 2 - $(that.elem).find(".currline").prev().height() - 15);
+        $(that.elem).find(".lrcText").stop().animate({
+            scrollTop: scroll
+        }, 500);
+        that.callback({
+            currentLyric: $currLine.html()
+        });
+    }
 		/* ===== 移动端（Capacitor/Android）扩展 ===== */
 	/* 规范化服务器地址：去尾部斜杠；用户只填 IP/域名时自动补 http:// */
 	function yyNormBase(v) {
@@ -1199,28 +1305,33 @@
 		for (let i = 0; i < len; i++) { binary += String.fromCharCode(bytes[i]); }
 		return window.btoa(binary);
 	};
-	yyMusic.prototype._downloadAndroid = function(item) {
+	yyMusic.prototype._downloadAndroid = function(item, kind) {
 		let that = this;
-		let url = item.SongUrl;
+		kind = kind || 'music';
+		let map = {
+			music: { url: item.SongUrl,    ext: '.mp3', label: '歌曲' },
+			lyric: { url: item.SongLrc,    ext: '.lrc', label: '歌词' },
+			image: { url: item.SongPoster, ext: '.jpg', label: '海报' }
+		};
+		let cfg = map[kind] || map.music;
+		let url = cfg.url;
 		let name = (item.SongName || 'song').replace(/[\\/:*?"<>|\n\r\t]/g,'_').slice(0,80);
-		if (!url) { layer.msg('暂无下载地址',{offset:'rt',anim:'slideLeft'}); return; }
+		let fileName = name + cfg.ext;
+		if (!url) { layer.msg('暂无' + cfg.label + '地址',{offset:'rt',anim:'slideLeft'}); return; }
 		let cap = window.Capacitor;
 		let FS = cap && cap.Plugins && cap.Plugins.Filesystem;
 		if (!FS) {
-			layer.confirm('当前环境不支持直接下载，是否用浏览器打开歌曲？',{title:'下载',btn:['打开','取消']}, function(i){ layer.close(i); window.open(url,'_blank'); });
+			layer.confirm('当前环境不支持直接下载，是否用浏览器打开？',{title:'下载',btn:['打开','取消']}, function(i){ layer.close(i); window.open(url,'_blank'); });
 			return;
 		}
-		layer.confirm('下载《'+(item.SongName||'')+'》到手机存储？',{title:'歌曲下载',btn:['下载','取消']}, function(idx){
-			layer.close(idx);
-			layer.msg('正在下载…',{offset:'rt',anim:'slideLeft'});
-			fetch(url).then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.arrayBuffer(); })
-				.then(function(buf){
-					let b64 = that._arrayBufferToBase64(buf);
-					return FS.writeFile({ path: name+'.mp3', data: b64, directory: 'DOCUMENTS', recursive: true });
-				})
-				.then(function(){ layer.msg('已保存：'+name+'.mp3（手机存储/Documents）',{offset:'rt',anim:'slideLeft'}); })
-				.catch(function(e){ layer.msg('下载失败：'+(e&&e.message||e),{offset:'rt',anim:'slideLeft'}); });
-		});
+		layer.msg('正在下载' + cfg.label + '…',{offset:'rt',anim:'slideLeft'});
+		fetch(url).then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.arrayBuffer(); })
+			.then(function(buf){
+				let b64 = that._arrayBufferToBase64(buf);
+				return FS.writeFile({ path: fileName, data: b64, directory: 'DOCUMENTS', recursive: true });
+			})
+			.then(function(){ layer.msg('已保存：'+fileName+'（手机存储/Documents）',{offset:'rt',anim:'slideLeft'}); })
+			.catch(function(e){ layer.msg('下载失败：'+(e&&e.message||e),{offset:'rt',anim:'slideLeft'}); });
 	};
 	yyMusic.prototype._settingsAndroid = function() {
 		let that = this;
